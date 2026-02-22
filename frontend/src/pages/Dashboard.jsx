@@ -1,11 +1,13 @@
-import React from 'react';
+import React, { useState } from 'react';
 import UserProfile from '../components/dashboradSubcomponents/UserProfile.jsx';
 import ProjectSection from '../components/dashboradSubcomponents/ProjectSection.jsx';
 import { useAuth } from '../components/providers/AuthProvider.jsx';
 import { useNavigate } from 'react-router-dom';
+import { initTestUsers } from '../apis/api';
+import { toast } from 'sonner';
 import {
   FiLogOut, FiActivity, FiLayers, FiBriefcase, FiCheckCircle,
-  FiZap, FiShield, FiFileText, FiClock, FiTrendingUp, FiTrendingDown
+  FiZap, FiShield, FiFileText, FiClock, FiTrendingUp, FiTrendingDown, FiRefreshCw
 } from 'react-icons/fi';
 
 // ── Hardcoded overall project statistics ──
@@ -73,12 +75,33 @@ const COLOR_MAP = {
 export default function Dashboard() {
   const { logout } = useAuth();
   const navigate = useNavigate();
+  const [refreshing, setRefreshing] = useState(false);
 
   const handleLogout = () => {
     try {
       logout();
     } finally {
       navigate('/');
+    }
+  };
+
+  const handleRefreshTestUsers = async () => {
+    if (!window.confirm(
+      '⚠️ This will DELETE all users, projects, and related data, then re-create the 5 test users.\n\nYou will be logged out after this.\n\nContinue?'
+    )) return;
+
+    setRefreshing(true);
+    try {
+      await initTestUsers();
+      toast.success('Test users refreshed! Logging out…');
+      setTimeout(() => {
+        try { logout(); } finally { navigate('/'); }
+      }, 1200);
+    } catch (err) {
+      console.error('Init test users failed:', err);
+      toast.error('Failed to refresh test users. Check console.');
+    } finally {
+      setRefreshing(false);
     }
   };
 
@@ -101,14 +124,26 @@ export default function Dashboard() {
           <h2 className="text-3xl font-black text-slate-900 tracking-tight">Anvaya Workspace</h2>
         </div>
 
-        <button
-          className="flex items-center gap-2 px-5 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-rose-50 hover:text-rose-600 hover:border-rose-100 transition-all shadow-sm active:scale-95"
-          onClick={handleLogout}
-          aria-label="Logout"
-        >
-          <FiLogOut size={14} />
-          Terminate Session
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            className="flex items-center gap-2 px-4 py-2.5 bg-white border border-amber-200 text-amber-700 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-amber-50 hover:border-amber-300 transition-all shadow-sm active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+            onClick={handleRefreshTestUsers}
+            disabled={refreshing}
+            aria-label="Refresh test users"
+          >
+            <FiRefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />
+            {refreshing ? 'Refreshing…' : 'Refresh Test Users'}
+          </button>
+
+          <button
+            className="flex items-center gap-2 px-5 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-rose-50 hover:text-rose-600 hover:border-rose-100 transition-all shadow-sm active:scale-95"
+            onClick={handleLogout}
+            aria-label="Logout"
+          >
+            <FiLogOut size={14} />
+            Terminate Session
+          </button>
+        </div>
       </div>
 
       {/* ═══════════════════════════════════════════════════════════════

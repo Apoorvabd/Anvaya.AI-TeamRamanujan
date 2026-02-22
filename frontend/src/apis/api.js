@@ -114,7 +114,41 @@ export const deleteAllUsers = async () => {
   }
 };
 
+/**
+ * Init / Refresh Test Users
+ * 1. Deletes ALL users (cascade-deletes all projects, stakeholders, facts, contradictions, resolutions)
+ * 2. Re-creates the 5 test users from testuse.js fixtures
+ */
+export const initTestUsers = async () => {
+  const { user1, user2, user3, user4, user5 } = await import('../test/testuse');
+  const users = [user1, user2, user3, user4, user5];
 
+  // Step 1 — wipe everything
+  await api.delete('/users');
+  toast.success('All existing users & data deleted');
+
+  // Step 2 — re-create each test user
+  const results = [];
+  for (const u of users) {
+    const payload = {
+      fullName: u.fullName || u.name || u.fullname,
+      email: u.email,
+      password: '1234',
+      role: u.role || 'user',
+      desc: u.project || u.data_vault?.proposal?.project || '',
+    };
+    try {
+      const res = await api.post('/users', payload);
+      results.push({ email: payload.email, success: true, data: res.data });
+    } catch (err) {
+      results.push({ email: payload.email, success: false, error: err?.response?.data || err.message });
+    }
+  }
+
+  const successCount = results.filter(r => r.success).length;
+  toast.success(`Test users initialized: ${successCount}/${users.length} created`);
+  return results;
+};
 
 
 
